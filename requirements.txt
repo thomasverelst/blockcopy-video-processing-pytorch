@@ -1,0 +1,6 @@
+numpy
+tqdm
+matplotlib
+cmapy
+opencv-python
+ptflops=0.6.6
