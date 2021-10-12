@@ -30,6 +30,8 @@ def build_policy_from_settings(settings: Dict) -> None:
             information_gain = InformationGainSemSeg(num_classes=settings['block_num_classes'])
         elif policy_name == 'rl_objectdetection':
             information_gain = InformationGainObjectDetection(num_classes=settings['block_num_classes'])
+        else:
+            raise AttributeError(f'Policy with name "{policy_name}" not defined!')
         
         return PolicyTrainRL(block_size=settings['block_size'], block_target=settings['block_target'],
                             cost_momentum=settings['block_cost_momentum'], optimizer=optimizer,

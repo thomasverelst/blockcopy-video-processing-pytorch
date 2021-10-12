@@ -1,1 +1,3 @@
 output_demo/
+log/
+pretrained/*
