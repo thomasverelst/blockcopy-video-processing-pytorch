@@ -2,7 +2,7 @@ import abc
 import logging
 from abc import abstractmethod
 from typing import Dict
-
+import random
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -150,9 +150,29 @@ class PolicyRandom(Policy):
         return policy_meta
     
 class PolicyTrainRL(Policy, metaclass=abc.ABCMeta):
-    def __init__(self, block_size: int, block_target: float, cost_momentum: float,  optimizer: torch.optim.Optimizer, 
-    complexity_weight : float,
-    policy_net: PolicyNet, information_gain: InformationGain, num_init_images: int = 100, verbose: bool = False):
+    def __init__(self, block_size: int, block_target: float,  optimizer: torch.optim.Optimizer, 
+    complexity_weight: float,
+    policy_net: PolicyNet, information_gain: InformationGain, 
+    cost_momentum: float = 0.9, at_least_one: bool = False, quantize_number_exec: float = 0,
+    num_init_images: int = 100, verbose: bool = False):
+        """ Reinforcement learning policy for block executions
+
+        Args:
+            block_size (int): size of blocks in pixels
+            block_target (float): execution rate target as percentage between 0 and 1
+            cost_momentum (float): mome
+            optimizer (torch.optim.Optimizer): Optimizer to train policy net's weights
+            complexity_weight (float): weight (gamma in paper) being the balance between complexity reward and information gain reward
+            policy_net (PolicyNet): policy network  module
+            information_gain (InformationGain):  information gain module
+            at_least_one (bool, optional): require at least one block execution (might avoid bugs when executing nothing) Defaults to False,
+            quantize_number_exec (float, optional): Quantize the number of executed blocks to a percentage of the total amount of blocks. Float is 
+            percentage (e.g. 1/16 will quantize the number of executedb blocks to 8 in a grid of 8x16 blocks). Improves efficiency as cudnn.benchmark relies on 
+            non-changing tensor dimensions. Defaults to 0 (disabled).
+            num_init_images (int, optional): Number of images to warmup the policy. Block target starts at 1 and reaches the given block_target at num_init_images.
+            Defaults to 100.
+            verbose (bool, optional): Print debugging information for policy. Defaults to False.
+        """
         super().__init__(block_size, verbose)
         assert block_target <= 1
         assert block_target >= 0
@@ -167,6 +187,9 @@ class PolicyTrainRL(Policy, metaclass=abc.ABCMeta):
 
         self.complexity_weight_gamma = complexity_weight
         self.optimizer = optimizer
+
+        self.at_least_one = at_least_one
+        self.quantize_number_exec = 0 # 1/16
     
     def forward(self, policy_meta):
         N,C,H,W = policy_meta['inputs'].shape
@@ -188,9 +211,22 @@ class PolicyTrainRL(Policy, metaclass=abc.ABCMeta):
                 m = Bernoulli(logits=grid_logits) # create distribution
                 grid = m.sample() # sample
                 
-                # if grid.sum() == 0:
+                if self.at_least_one and grid.sum() == 0:
                     # if no blocks executed, execute a single one
-                    # grid[0,0,0,0] = 1
+                    grid[0,0,0,0] = 1
+                
+                if self.quantize_number_exec > 0: 
+                    # it might be more efficient to round the quantize the number of executed blocks 
+                    # as cudnn.benchmark caches per tensor dimension
+                    grid2 = grid.bool()
+                    total = grid2.numel()
+                    idx_not_exec = torch.nonzero(~grid2.flatten()).squeeze(1).tolist()
+                    num_exec = total - len(idx_not_exec)
+                    multiple = int(total*self.quantize_number_exec)
+                    num_exec_rounded = multiple * (1 + (num_exec - 1) // multiple)
+                    idx = random.sample(idx_not_exec, num_exec_rounded - num_exec)
+                    grid.flatten()[idx] = 1                   
+
                 
                 grid_probs = m.probs
                 grid_log_probs = m.log_prob(grid)
@@ -251,6 +287,8 @@ class PolicyTrainRL(Policy, metaclass=abc.ABCMeta):
                     self.optimizer.step()
                     self.optimizer.zero_grad(set_to_none=True)
 
+                exec_mean = policy_meta["grid_probs"][grid].mean()
+                skip_mean = policy_meta["grid_probs"][~grid].mean()
                 if self.verbose:
                     s = ''
                     s += f'BLOCKS/running_cost: {self.running_cost} \n'
@@ -258,8 +296,13 @@ class PolicyTrainRL(Policy, metaclass=abc.ABCMeta):
                     s += f'BLOCKS/information_gain_max: {ig.max()} \n'
                     s += f'BLOCKS/information_gain_min: {ig.min()} \n'
                     s += f'BLOCKS/reward_complexity_weighted: {reward_complexity_weighted} \n'
-                    s += f'BLOCKS/avg_prob_exec: {policy_meta["grid_probs"][grid].mean()} \n'
-                    s += f'BLOCKS/avg_prob_skip: {policy_meta["grid_probs"][~grid].mean()} \n'
+                    s += f'BLOCKS/avg_prob_exec: {exec_mean} \n'
+                    s += f'BLOCKS/avg_prob_skip: {skip_mean} \n'
                     print(s)
                     print(self.stats)
+                if self.stats.count_images > self.num_init_images and exec_mean - skip_mean < 0.3:
+                    print('Warning: Block execution policy seems not to converge properly.'
+                            f'\n Mean predicted probability of executed blocks [0-1]: {exec_mean} '
+                            f'\n Mean predicted probability of skipped blocks [0-1]: {skip_mean} ')
+                    
         return policy_meta

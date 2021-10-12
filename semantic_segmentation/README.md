@@ -9,8 +9,8 @@ Semantic segmentation checkpoints can be found here.
 
 | network       | static accuracy  | dynamic accuracy  | link                             |
 |---------------|------------------|-------------------|----------------------------------|
-| SwiftNet-RN18 | 75.6 @ 104 GMACs | 73.4 @ 63.2 GMACs | [https://drive.google.com/file/d/1-06FdQTegy76A0dv4JDvwPNOsJu6QCZw/view?usp=sharing](https://drive.google.com/file/d/1-06FdQTegy76A0dv4JDvwPNOsJu6QCZw/view?usp=sharing) |
-| SwiftNet-RN50 | 77.6 @ 210 GMACs | 75.8 @ 122 GMACs | [https://drive.google.com/file/d/1FtiIEhD9tVMPcJwx41itGCEKU3cyyd0e/view?usp=sharing](https://drive.google.com/file/d/1FtiIEhD9tVMPcJwx41itGCEKU3cyyd0e/view?usp=sharing) |
+| SwiftNet-RN18 | 75.6 @ 104 GMACs | 73.5 @ 63.2 GMACs | [https://drive.google.com/file/d/1-06FdQTegy76A0dv4JDvwPNOsJu6QCZw/view?usp=sharing](https://drive.google.com/file/d/1-06FdQTegy76A0dv4JDvwPNOsJu6QCZw/view?usp=sharing) |
+| SwiftNet-RN50 | 77.6 @ 210 GMACs | 76.2 @ 121 GMACs | [https://drive.google.com/file/d/1FtiIEhD9tVMPcJwx41itGCEKU3cyyd0e/view?usp=sharing](https://drive.google.com/file/d/1FtiIEhD9tVMPcJwx41itGCEKU3cyyd0e/view?usp=sharing) |
 
 Download the RN50 checkpoint and place it in the `pretrained/` folder
 Note that these checkpoints only have a pretrained static segmentation model, the policy is always trained at test time as specified below.

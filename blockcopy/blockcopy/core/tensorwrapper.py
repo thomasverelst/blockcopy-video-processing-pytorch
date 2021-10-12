@@ -199,12 +199,6 @@ class TensorWrapper(torch.Tensor):
         self._features_prev = features_prev
         self._features = BlockFeatures(device=self.device)
         return self._features
-    
-    @staticmethod
-    def _round(number: int, total: int, fraction: float = 1/16) -> int:
-        multiple = int(total*fraction)
-        out = multiple * (1 + (number - 1) // multiple)
-        return out
         
     @property
     def data_shape(self) -> torch.Size:
@@ -284,8 +278,7 @@ class TensorWrapper(torch.Tensor):
                 print(f'TensorWrapper >> BLOCK SPLIT >> block size {block_size} with grid shape {(GH, GW)}')
             
             n_exec = len(mapping_exec)
-            n_total = grid_idx.numel()
-            size = (self._round(n_exec, n_total), C, block_size, block_size) if n_exec > 0 else (0,C,block_size,block_size)
+            size = (n_exec, C, block_size, block_size) if n_exec > 0 else (0,C,block_size,block_size)
             out = torch.empty(size, dtype=self.dtype, device=self.device)
             out = SplitFunction.apply(out, self, mapping_exec, grid_idx)
             out = out.as_subclass(TensorWrapper)
@@ -413,6 +406,9 @@ class TensorWrapper(torch.Tensor):
         return out
         
     def _func_replace_paddding(self, func, types, args, kwargs):
+        """
+        replaces padding of the operation by blockpadding
+        """
         args = list(args)
         padding = kwargs.get('padding', None)
         if padding is None:
@@ -472,17 +468,33 @@ class TensorWrapper(torch.Tensor):
     
     def _func_batched(self, func, types, args, kwargs):
         """
-        applies group norm on blocked representation
+        some functions apply operations per batch element (e.g. group norm), however, tensorwrapper uses the batch dimension as block dimension
+        and this results in wrong results.
+        This function adds a batch dimension of 1 so that these operations can be executed correctly
         """
         args = list(args)
+
+        # convert data from tensorwrapper to torch.Tensor
         data = args[0].as_subclass(torch.Tensor)
+
+        # remember input shape
         in_shape = data.shape
+
+        # switch batch and channel dimension
         data = data.permute(1,0,2,3)
-        data = data.reshape(data.shape[0], -1).unsqueeze(0)
+
+        # merge batch and spatial dimensions and add new batch dimension of 1
+        data = data.reshape(data.shape[0], -1).unsqueeze(0).unsqueeze(3)
+
+        # data is 4d tensor (1, channels, batch x height x width, 1)
         args[0] = data
         types = list(types)
         types[0] = type(data)
+
+        # apply operation
         out =  super().__torch_function__(func, types, args, kwargs)
+
+        # convert back to block representation
         out = out.as_subclass(torch.Tensor)
         out = out.squeeze(0).view(in_shape[1], in_shape[0], in_shape[2], in_shape[3]).permute(1,0,2,3).contiguous()
         out = out.as_subclass(TensorWrapper)

@@ -45,6 +45,8 @@ Install our blockcopy module
     python setup.py develop
     cd ..
 
+If any other packages are missing, they should be easily installable using pip.
+
 ## Dataset preparation
 ### Requirements
 This code uses the [Cityscapes](https://www.cityscapes-dataset.com/) dataset, with the video frames in the set called `leftImg8bit_sequence_trainvaltest.zip (324GB)` (MD5: 4348961b135d856c1777f7f1098f7266), which you might have to request on the download page. Note that the semantic segmentation codebase has a demo option to work on any image dataset for demo purposes when the dataset is not available.

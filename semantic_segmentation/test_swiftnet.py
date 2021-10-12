@@ -87,7 +87,7 @@ def main():
 
     ## Load model weights
     model_checkpoint_path = args.model_checkpoint
-    assert os.path.isfile(model_checkpoint_path), "Demo requires model checkpoint!"
+    assert os.path.isfile(model_checkpoint_path), f"Demo requires model checkpoint!: File not found: {model_checkpoint_path}"
     logging.info(f"=> loading model checkpoint '{model_checkpoint_path}'")
     checkpoint = torch.load(model_checkpoint_path)
     model.load_state_dict(checkpoint["state_dict"], strict=True)
