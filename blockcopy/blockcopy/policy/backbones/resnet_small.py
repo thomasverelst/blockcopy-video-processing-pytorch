@@ -1,7 +1,6 @@
 """ 
 ResNet for 32 by 32 images (CIFAR)
 """
-BATCHNORM_MOMENTUM = 0.1
 
 import math
 import logging 
@@ -39,10 +38,10 @@ class BasicBlock(nn.Module):
             norm_layer = nn.BatchNorm2d
 
         self.conv1 = conv3x3(inplanes, planes, stride)
-        self.bn1 = nn.BatchNorm2d(planes, momentum=BATCHNORM_MOMENTUM)
-        self.relu = nn.ReLU(inplace=True)
+        self.bn1 = nn.BatchNorm2d(planes)
+        self.relu = nn.ReLU(inplace=False)
         self.conv2 = conv3x3(planes, planes)
-        self.bn2 = nn.BatchNorm2d(planes, momentum=BATCHNORM_MOMENTUM)
+        self.bn2 = nn.BatchNorm2d(planes)
         self.downsample = downsample
         self.stride = stride
 
@@ -76,7 +75,7 @@ class ResNet_32x32(nn.Module):
         self.in_channels = in_channels
         self.inplanes = int(16*width_factor)
         self.conv1 = conv3x3(in_channels, int(16*width_factor))
-        self.bn1 = nn.BatchNorm2d(int(16*width_factor), momentum=BATCHNORM_MOMENTUM)
+        self.bn1 = nn.BatchNorm2d(int(16*width_factor))
         self.relu = nn.ReLU(inplace=False)
         self.layer1 = self._make_layer(block, int(16*width_factor), layers[0])
         self.layer2 = self._make_layer(block, int(32*width_factor), layers[1], stride=2)
@@ -100,7 +99,7 @@ class ResNet_32x32(nn.Module):
             downsample = nn.Sequential(
                 nn.Conv2d(self.inplanes, planes * block.expansion,
                           kernel_size=1, stride=stride, bias=False),
-                nn.BatchNorm2d(planes * block.expansion, momentum=BATCHNORM_MOMENTUM),
+                nn.BatchNorm2d(planes * block.expansion),
             )
 
         layers = []

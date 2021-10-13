@@ -1,6 +1,6 @@
 
 import abc
-from typing import Dict, List
+from typing import Dict, List, Tuple
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -22,7 +22,7 @@ class InformationGain(nn.Module, metaclass=abc.ABCMeta):
 class InformationGainSemSeg(InformationGain):
     def __init__(self, num_classes):
         super().__init__(num_classes)
-        self.scale_factor = 1/8
+        self.scale_factor = 1/4
 
     def get_output_repr(self, policy_meta: Dict) -> torch.Tensor:
         out = policy_meta['outputs']
@@ -33,8 +33,8 @@ class InformationGainSemSeg(InformationGain):
         assert policy_meta['outputs'] is not None
         assert policy_meta['outputs_prev'] is not None
 
-        outputs = F.interpolate(policy_meta['outputs'], scale_factor=self.scale_factor, mode='bilinear')
-        outputs_prev = F.interpolate(policy_meta['outputs_prev'], scale_factor=self.scale_factor, mode='bilinear')
+        outputs = F.interpolate(policy_meta['outputs'], scale_factor=self.scale_factor, mode='nearest')
+        outputs_prev = F.interpolate(policy_meta['outputs_prev'], scale_factor=self.scale_factor, mode='nearest')
         ig = F.kl_div(input=F.log_softmax(outputs, dim=1), 
                       target=F.log_softmax(outputs_prev, dim=1), 
                       reduce=False, reduction='mean', log_target=True).mean(1, keepdim=True)
@@ -53,7 +53,18 @@ class InformationGainObjectDetection(InformationGain):
         N,C,H,W = policy_meta['inputs'].shape
         return build_instance_mask_iou_gain(policy_meta['outputs'], policy_meta['outputs_prev'], (N, self.num_classes, H, W), device=policy_meta['inputs'].device)
 
-def build_instance_mask(bbox_results: List[List[np.ndarray]], size: tuple, device='cpu'):
+def build_instance_mask(bbox_results: List[List[np.ndarray]], size: tuple, device='cpu') -> torch.Tensor:
+    """
+    Returns a tensor with s
+
+    Args:
+        bbox_results (List[List[np.ndarray]]): [description]
+        size (tuple): [description]
+        device (str, optional): [description]. Defaults to 'cpu'.
+
+    Returns:
+        [type]: [description]
+    """
     mask = torch.zeros(size, device=device)
     num_classes = size[1]
     for c in range(num_classes):
@@ -65,7 +76,7 @@ def build_instance_mask(bbox_results: List[List[np.ndarray]], size: tuple, devic
             mask[0,c,y1:y2, x1:x2] = torch.max(mask[0,0, y1:y2, x1:x2], score)
     return mask
 
-def build_instance_mask_iou_gain(bbox_results, bbox_results_prev, size, device='cpu', SUBSAMPLE = 2) -> torch.Tensor:     
+def build_instance_mask_iou_gain(bbox_results, bbox_results_prev, size, device='cpu', SUBSAMPLE=4) -> torch.Tensor:     
     assert len(bbox_results) == 1, "only supports batch size 1"  
     mask = torch.zeros((size[0],size[1],size[2]//SUBSAMPLE,size[3]//SUBSAMPLE), device='cuda')
 
@@ -108,19 +119,17 @@ def build_instance_mask_iou_gain(bbox_results, bbox_results_prev, size, device='
     return mask
 
 
-    
-def get_iou(bbox1, bbox2):
+
+def get_iou(bbox1: Tuple[int, int, int, int], bbox2: Tuple[int, int, int]):
     """
     Calculate the Intersection over Union (IoU) of two bounding boxes.
 
     Parameters
     ----------
-    bb1 : dict
-        Keys: {'x1', 'x2', 'y1', 'y2'}
+    bb1 : tuple('x1', 'x2', 'y1', 'y2')
         The (x1, y1) position is at the top left corner,
         the (x2, y2) position is at the bottom right corner
-    bb2 : dict
-        Keys: {'x1', 'x2', 'y1', 'y2'}
+    bb2 : tuple('x1', 'x2', 'y1', 'y2')
         The (x, y) position is at the top left corner,
         the (x2, y2) position is at the bottom right corner
 

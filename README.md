@@ -9,15 +9,18 @@
 At the moment, we only provide a basic blockcopy implementation for semantic segmentation.
 Coming soon:
 
-* more documentation on the codebase and implementation
-* pedestrian detection integration in Pedestron codebase
+* more documentation in the codebase and implementation
 * code improvements for better analysis and debugging
 * more efficient code with less overhead
-* DeepLabV3+ semantic segmentation model
+* improved semantic segmentation model
 
 ## Code structure
 There is an installable package of the blockcopy framework in `blockcopy` folder, which is used in the codebases for the separate tasks.
 Each task has its own readme with additional instructions for that codebase.
+
+* [Semantic segmentation](./semantic_segmentation/): example implementation of BlockCopy with a semantic segmentation backbone, although 
+    semantic segmentation is not an optimal application since every region has changing outputs
+* [Pedestrian detection (Pedestron)](./Pedestron/): integration of BlockCopy in Pedestron
 
 ## Installation
 This code requires an NVIDIA CUDA-capable GPU (no CPU support), with a recent Pytorch version and CuPy:

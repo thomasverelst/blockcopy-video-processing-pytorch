@@ -25,7 +25,7 @@ To test the **accuracy** of a dynamic model and write output/exection visualizat
 
     python test_swiftnet.py --cityscapes-dir /path/to/cityscapes --model-backbone resnet50 --model-checkpoint pretrained/swiftnet_rn50.pth --output-dir rn50_t05 --block-policy rl_semseg --block-target 0.5 --batch-size 1 --half 
 
-resulting in
+resulting in (might fluctuate, execution policy is not deterministic)
 
     INFO:root:Number of images: 10000
     INFO:root:Mean IoU 76.12
@@ -35,6 +35,8 @@ To test the **speed** of a dynamic model (disabling metrics and some other code)
 
     python -O test_swiftnet.py --cityscapes-dir /path/to/cityscapes --model-backbone resnet50 --model-checkpoint pretrained/swiftnet_rn50.pth --block-policy rl_semseg --block-target 0.5 --batch-size 1 --half --fast --num-clips-warmup 30 --num-clips-eval 30
 
+Which should give around 17 FPS on a GTX 1080 Ti.
+
 Note that if you have an I/O bottleneck, you can use the `--single-clip-loop` option.
 
 ### Static baseline model
@@ -43,7 +45,7 @@ Note that if you have an I/O bottleneck, you can use the `--single-clip-loop` op
 
     python test_swiftnet.py --cityscapes-dir /path/to/cityscapes --model-backbone resnet50 --model-checkpoint pretrained/swiftnet_rn50.pth --output-dir rn50_t05_static --block-policy static --batch-size 1 --half 
 
-Resulting in
+Resulting in 
 
     INFO:root:Mean IoU 77.65
     INFO:root:Computational cost (avg per img): 205.841 GMACs
@@ -53,6 +55,7 @@ Resulting in
 
     python -O test_swiftnet.py --cityscapes-dir /path/to/cityscapes --model-backbone resnet50 --model-checkpoint pretrained/swiftnet_rn50.pth --block-policy static --batch-size 1 --half --fast --num-clips-warmup 30 --num-clips-eval 30
 
+Which should give around 12 FPS on a GTX 1080 Ti.
 
 ## Demo Mode
 

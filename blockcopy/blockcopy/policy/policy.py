@@ -26,6 +26,7 @@ def build_policy_from_settings(settings: Dict) -> None:
     if policy_name.startswith('rl_'): # reinforcement learnign policy
         net = build_policy_net_from_settings(settings)
         optimizer = build_policy_optimizer_from_settings(settings, net)
+        quantize_number_exec = 1/8
         if policy_name == 'rl_semseg':
             information_gain = InformationGainSemSeg(num_classes=settings['block_num_classes'])
         elif policy_name == 'rl_objectdetection':
@@ -35,7 +36,7 @@ def build_policy_from_settings(settings: Dict) -> None:
         
         return PolicyTrainRL(block_size=settings['block_size'], block_target=settings['block_target'],
                             cost_momentum=settings['block_cost_momentum'], optimizer=optimizer,
-                            complexity_weight = settings['block_complexity_weight'],
+                            complexity_weight = settings['block_complexity_weight'], quantize_number_exec=quantize_number_exec,
                             policy_net=net, information_gain=information_gain, verbose=settings['block_policy_verbose'])
 
     raise NotImplementedError(f"Policy {policy_name} not implemented")
@@ -189,7 +190,7 @@ class PolicyTrainRL(Policy, metaclass=abc.ABCMeta):
         self.optimizer = optimizer
 
         self.at_least_one = at_least_one
-        self.quantize_number_exec = 0 # 1/16
+        self.quantize_number_exec = quantize_number_exec
     
     def forward(self, policy_meta):
         N,C,H,W = policy_meta['inputs'].shape
@@ -204,28 +205,30 @@ class PolicyTrainRL(Policy, metaclass=abc.ABCMeta):
         else:
             # execute policy net
             with torch.enable_grad():   
-                self.net.train()
-                grid_logits = self.net(policy_meta)
-                assert torch.all(~torch.isnan(grid_logits)), "Policy net returned NaN's, maybe optimization problem?"
+                with timings.env('policy/net',3):
+                    grid_logits = self.net(policy_meta)
+                    assert torch.all(~torch.isnan(grid_logits)), "Policy net returned NaN's, maybe optimization problem?"
                 
-                m = Bernoulli(logits=grid_logits) # create distribution
-                grid = m.sample() # sample
+                with timings.env('policy/sample',3):
+                    m = Bernoulli(logits=grid_logits) # create distribution
+                    grid = m.sample() # sample
                 
                 if self.at_least_one and grid.sum() == 0:
                     # if no blocks executed, execute a single one
                     grid[0,0,0,0] = 1
                 
                 if self.quantize_number_exec > 0: 
-                    # it might be more efficient to round the quantize the number of executed blocks 
-                    # as cudnn.benchmark caches per tensor dimension
-                    grid2 = grid.bool()
-                    total = grid2.numel()
-                    idx_not_exec = torch.nonzero(~grid2.flatten()).squeeze(1).tolist()
-                    num_exec = total - len(idx_not_exec)
-                    multiple = int(total*self.quantize_number_exec)
-                    num_exec_rounded = multiple * (1 + (num_exec - 1) // multiple)
-                    idx = random.sample(idx_not_exec, num_exec_rounded - num_exec)
-                    grid.flatten()[idx] = 1                   
+                    with timings.env('policy/quantize_number_exec',3):
+                        # it might be more efficient to round the quantize the number of executed blocks 
+                        # as cudnn.benchmark caches per tensor dimension
+                        grid2 = grid.cpu().bool()
+                        total = grid2.numel()
+                        idx_not_exec = torch.nonzero(~grid2.flatten()).squeeze(1).tolist()
+                        num_exec = total - len(idx_not_exec)
+                        multiple = int(total*self.quantize_number_exec)
+                        num_exec_rounded = multiple * (1 + (num_exec - 1) // multiple)
+                        idx = random.sample(idx_not_exec, num_exec_rounded - num_exec)
+                        grid.flatten()[idx] = 1                   
 
                 
                 grid_probs = m.probs
@@ -301,7 +304,7 @@ class PolicyTrainRL(Policy, metaclass=abc.ABCMeta):
                     print(s)
                     print(self.stats)
                 if self.stats.count_images > self.num_init_images and exec_mean - skip_mean < 0.3:
-                    print('Warning: Block execution policy seems not to converge properly.'
+                    print('Warning: Block execution policy seems not well trained yet.'
                             f'\n Mean predicted probability of executed blocks [0-1]: {exec_mean} '
                             f'\n Mean predicted probability of skipped blocks [0-1]: {skip_mean} ')
                     
