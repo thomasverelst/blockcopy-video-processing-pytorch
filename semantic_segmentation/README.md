@@ -23,17 +23,17 @@ Note that these checkpoints only have a pretrained static segmentation model, th
 
 To test the **accuracy** of a dynamic model and write output/exection visualizations to `output_demo/rn50_t05/`. Then policy is first warmed up on `--num-clips-warmup` clips (default 600), and then evaluated on the validation set.
 
-    python test_swiftnet.py --cityscapes-dir /path/to/cityscapes --model-backbone resnet50 --model-checkpoint pretrained/swiftnet_rn50.pth --output-dir rn50_t05 --block-policy rl_semseg --block-target 0.5 --batch-size 1 --half 
+    bash configs/swiftnet/swiftnet_rl05.sh
 
 resulting in (might fluctuate, execution policy is not deterministic)
 
     INFO:root:Number of images: 10000
-    INFO:root:Mean IoU 76.12
-    INFO:root:Computational cost (avg per img): 121.903 GMACs
+    INFO:root:Mean IoU 76.85
+    INFO:root:Computational cost (avg per img): 118.584 GMACs
 
 To test the **speed** of a dynamic model (disabling metrics and some other code)
 
-    python -O test_swiftnet.py --cityscapes-dir /path/to/cityscapes --model-backbone resnet50 --model-checkpoint pretrained/swiftnet_rn50.pth --block-policy rl_semseg --block-target 0.5 --batch-size 1 --half --fast --num-clips-warmup 30 --num-clips-eval 30
+    bash configs/swiftnet/swiftnet_rl05_speed.sh
 
 Which should give around 17 FPS on a GTX 1080 Ti.
 
@@ -43,7 +43,7 @@ Note that if you have an I/O bottleneck, you can use the `--single-clip-loop` op
 
 **Accuracy**:
 
-    python test_swiftnet.py --cityscapes-dir /path/to/cityscapes --model-backbone resnet50 --model-checkpoint pretrained/swiftnet_rn50.pth --output-dir rn50_t05_static --block-policy static --batch-size 1 --half 
+    bash configs/swiftnet/swiftnet_static.sh
 
 Resulting in 
 
@@ -53,7 +53,7 @@ Resulting in
 
 **Speed**:
 
-    python -O test_swiftnet.py --cityscapes-dir /path/to/cityscapes --model-backbone resnet50 --model-checkpoint pretrained/swiftnet_rn50.pth --block-policy static --batch-size 1 --half --fast --num-clips-warmup 30 --num-clips-eval 30
+    bash configs/swiftnet/swiftnet_static_speed.sh
 
 Which should give around 12 FPS on a GTX 1080 Ti.
 
@@ -61,4 +61,4 @@ Which should give around 12 FPS on a GTX 1080 Ti.
 
 Instead of using the Cityscapes video dataset, you can use the `demo-dir` argument to evaluate on an arbitrary set of images. The images will be processed as a video after sorting the filenames with natural sort (e.g. img001.jpg, img002.jpg ...). This can be used to visualize the execution decisions on the dataset. Set the number of dataloader workers to 0 to ensure the ordering. 
 
-    python test_swiftnet.py --cityscapes-dir /path/to/cityscapes --demo-dir /path/to/folder/with/demo/images --model-backbone resnet50 --model-checkpoint pretrained/swiftnet_rn50.pth --output-dir demo_rn50_t05 --block-policy rl_semseg --block-target 0.5 --batch-size 1 --half --workers 0
+    python test_swiftnet.py --demo-dir /path/to/folder/with/demo/images --network swiftnet_resnet50 --model-checkpoint pretrained/swiftnet_rn50.pth --output-dir demo_rn50_t05 --block-policy rl_semseg --block-target 0.5 --batch-size 1 --half --workers 0

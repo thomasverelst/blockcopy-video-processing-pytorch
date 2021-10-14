@@ -7,12 +7,12 @@ import copy
 class BlockCopyModel(nn.Module):
     def __init__(self, base_model, settings):
         super().__init__()
+        self.is_blockcopy_manager = True
         self.base_model = base_model
         self.policy = blockcopy.build_policy_from_settings(settings)
         
         self.block_temporal_features = None
         self.reset_temporal()
-        self.train_policy = True
         self.train_interval = settings['block_train_interval']
     
     def load_state_dict(self, state_dict: 'OrderedDict[str, Tensor]', strict: bool = True):
@@ -36,6 +36,8 @@ class BlockCopyModel(nn.Module):
 
     def _forward_blockcopy(self, inputs, **kwargs):
         self.clip_length += 1
+        # torch.cuda.empty_cache() # memory fragmentation can cause OOM, force reclaim
+        
     
         # run policy
         self.policy_meta['inputs'] = inputs
@@ -73,7 +75,7 @@ class BlockCopyModel(nn.Module):
 
         with timings.env('blockcopy/policy_optim', 3):
             if self.policy is not None:
-                train_policy = self.train_policy and self.clip_length % self.train_interval == 0
+                train_policy = self.clip_length % self.train_interval == 0
                 self.policy_meta = self.policy.optim(self.policy_meta, train=train_policy)
         return out
 

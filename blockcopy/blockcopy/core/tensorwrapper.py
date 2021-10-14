@@ -11,6 +11,7 @@ from .block_funcs import CombineFunction, SplitFunction, TransferFunction
 from .blockpad import pad
 
 VERBOSE = False
+BLOCKPAD_ZERO = False
 
 def is_tensorwrapper(x) -> bool:
     """
@@ -409,6 +410,8 @@ class TensorWrapper(torch.Tensor):
         """
         replaces padding of the operation by blockpadding
         """
+        if BLOCKPAD_ZERO: # debug mode
+            return super().__torch_function__(func, types, args, kwargs)
         args = list(args)
         padding = kwargs.get('padding', None)
         if padding is None:

@@ -39,7 +39,7 @@ class Timings():
     def __repr__(self):
         s = ''
         if self.cnt > 0:
-            s += "### Profiler ###\n"
+            s += f"### Profiler (images: {self.cnt})###\n"
             for name in sorted(self.records):
                 val = self.records[name]*1000
                 val_avg = val/self.cnt

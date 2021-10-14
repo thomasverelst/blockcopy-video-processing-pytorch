@@ -28,6 +28,8 @@ class CityscapesVid(data.Dataset):
 
     mean = (73.1584 / 255, 82.9090 / 255, 72.3924 / 255)
     std = (44.9149 / 255, 46.1529 / 255, 45.3192 / 255)
+    # mean=[0.485, 0.456, 0.406]
+    # std=[0.229, 0.224, 0.225]
     
     CityscapesClass = namedtuple('CityscapesClass', ['name', 'id', 'train_id', 'category', 'category_id',
                                                      'has_instances', 'ignore_in_eval', 'color'])

@@ -33,8 +33,8 @@ class InformationGainSemSeg(InformationGain):
         assert policy_meta['outputs'] is not None
         assert policy_meta['outputs_prev'] is not None
 
-        outputs = F.interpolate(policy_meta['outputs'], scale_factor=self.scale_factor, mode='nearest')
-        outputs_prev = F.interpolate(policy_meta['outputs_prev'], scale_factor=self.scale_factor, mode='nearest')
+        outputs = F.interpolate(policy_meta['outputs'], scale_factor=self.scale_factor, mode='bilinear')
+        outputs_prev = F.interpolate(policy_meta['outputs_prev'], scale_factor=self.scale_factor, mode='bilinear')
         ig = F.kl_div(input=F.log_softmax(outputs, dim=1), 
                       target=F.log_softmax(outputs_prev, dim=1), 
                       reduce=False, reduction='mean', log_target=True).mean(1, keepdim=True)
@@ -76,9 +76,9 @@ def build_instance_mask(bbox_results: List[List[np.ndarray]], size: tuple, devic
             mask[0,c,y1:y2, x1:x2] = torch.max(mask[0,0, y1:y2, x1:x2], score)
     return mask
 
-def build_instance_mask_iou_gain(bbox_results, bbox_results_prev, size, device='cpu', SUBSAMPLE=4) -> torch.Tensor:     
+def build_instance_mask_iou_gain(bbox_results, bbox_results_prev, size, device='cpu', SUBSAMPLE=2) -> torch.Tensor:     
     assert len(bbox_results) == 1, "only supports batch size 1"  
-    mask = torch.zeros((size[0],size[1],size[2]//SUBSAMPLE,size[3]//SUBSAMPLE), device='cuda')
+    mask = torch.zeros((size[0], size[1], size[2]//SUBSAMPLE, size[3]//SUBSAMPLE), device='cuda')
 
     num_classes = size[1]
 

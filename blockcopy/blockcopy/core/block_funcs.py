@@ -5,7 +5,7 @@ from torch.autograd import Function
 from ..utils.profiler import timings
 
 CUDA_NUM_THREADS = 512
-CUDA_NUM_BLOCKS = 2048
+CUDA_NUM_BLOCKS = 1024
 
 class SplitFunction(Function):
     @staticmethod

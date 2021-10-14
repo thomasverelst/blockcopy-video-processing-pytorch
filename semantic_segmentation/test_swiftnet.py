@@ -29,20 +29,22 @@ def main():
                         default="", help="image root for demo")
     parser.add_argument("--cityscapes-dir", type=str, 
                         default="path/to/cityscapes", help="image root for cityscapes evaluation on video")
+    parser.add_argument("--mode",  type=str, default='val', choices=['val','test'], help='evaluation set')
+    parser.add_argument("--batch-size", type=int, default=1, help="Test batch size")
+    parser.add_argument("--res", type=int, default=1024, help="smallest image side in pixels (default Cityscapes resolution is 1024x2048")
+    parser.add_argument("--clip-length",  type=int, default=20, help="Cityscapes clip length (max 20 frames)")
+    parser.add_argument("--workers", type=int, default=6, help="number of dataloader workers")
+    parser.add_argument("--num-clips-warmup", type=int, default=500, help="limit number of clips (-1 to use all clips in training set)")
+    parser.add_argument("--num-clips-eval",  type=int, default=-1, help="limit number of clips (-1 to use all clips in test set)")
+    
     parser.add_argument("--model-backbone", default="resnet18", type=str, help="")
     parser.add_argument("--model-checkpoint", default="pretrained/swiftnet_rn18.pth",type=str,
                         help="path to pretrained model checkpoint")
+    
     parser.add_argument("--half", action="store_true", help="run at half precision (fp16)")
     parser.add_argument("--output-dir", default="", type=str, help="subdir for output visualizations")
-    parser.add_argument("--res", type=int, default=1024, help="smallest image side in pixels (default Cityscapes resolution is 1024x2048")
-    parser.add_argument("--num-clips-warmup", type=int, default=500, help="limit number of clips (-1 to use all clips in training set)")
-    parser.add_argument("--num-clips-eval",  type=int, default=-1, help="limit number of clips (-1 to use all clips in test set)")
-    parser.add_argument("--clip-length",  type=int, default=20, help="Cityscapes clip length (max 20 frames)")
-    parser.add_argument("--batch-size", type=int, default=1, help="Test batch size")
-    parser.add_argument("--mode",  type=str, default='val', choices=['val','test'], help='evaluation set')
     parser.add_argument("--fast", action="store_true", help="removes unnecessary operations such as metrics, and displays the FPS")
     parser.add_argument("--single-clip-loop", action="store_true", help="loop single clip to mitigate data loading I/O bottleneck")
-    parser.add_argument("--workers", type=int, default=6, help="number of dataloader workers")
     parser.add_argument("--timings", type=int, default=0, help="internal profiler timing priority (0 to disable, 5 for general timings, 10 for detailed timings)")
     
     # add blockcopy arguments to argparser
@@ -92,7 +94,7 @@ def main():
     checkpoint = torch.load(model_checkpoint_path)
     model.load_state_dict(checkpoint["state_dict"], strict=True)
     best_acc = checkpoint["best_acc"] if "best_acc" in checkpoint else "unknown"
-    epoch = checkpoint["epoch"] if "epoch" in checkpoint else "unkonwn"
+    epoch = checkpoint["epoch"] if "epoch" in checkpoint else "unknown"
     logging.info(
         f"=> loaded model checkpoint '{model_checkpoint_path}'\
         (epoch {epoch}, best_acc {best_acc})"
@@ -191,7 +193,7 @@ def main():
                 with torch.no_grad():
                     out = model(inputs)
                 if frame_id == clip_length - 1 or output_dir:
-                    out = F.interpolate(out, scale_factor=4.0, mode='bilinear')
+                    out = F.interpolate(out, size=inputs.shape[2:], mode='bilinear')
                     preds = out.detach().max(dim=1)[1].cpu()
 
             # viz if needed

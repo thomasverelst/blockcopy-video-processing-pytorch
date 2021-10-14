@@ -16,17 +16,17 @@ from torch.distributions import Bernoulli, Categorical
 def build_policy_from_settings(settings: Dict) -> None:
     policy_name = settings['block_policy']
     logging.info(f"> Policy: {policy_name} with execution percentage target {settings['block_target']} and block size {settings['block_size']}")
+    quantize_number_exec = 1/8
     
     if policy_name == 'all':
         return PolicyAll(block_size=settings['block_size'], verbose=settings['block_policy_verbose'])
     if policy_name == 'none':
         return PolicyNone(block_size=settings['block_size'], verbose=settings['block_policy_verbose'])
     if policy_name == 'random':
-        return PolicyRandom(block_size=settings['block_size'], verbose=settings['block_policy_verbose'])
+        return PolicyRandom(block_size=settings['block_size'], verbose=settings['block_policy_verbose'], quantize_number_exec=quantize_number_exec)
     if policy_name.startswith('rl_'): # reinforcement learnign policy
         net = build_policy_net_from_settings(settings)
         optimizer = build_policy_optimizer_from_settings(settings, net)
-        quantize_number_exec = 1/8
         if policy_name == 'rl_semseg':
             information_gain = InformationGainSemSeg(num_classes=settings['block_num_classes'])
         elif policy_name == 'rl_objectdetection':
@@ -43,7 +43,7 @@ def build_policy_from_settings(settings: Dict) -> None:
 
 def build_policy_optimizer_from_settings(settings: Dict, net: PolicyNet) -> torch.optim.Optimizer:
     # return torch.optim.Adam(net.parameters(), lr=settings['block_optim_lr'], 
-    #                            weight_decay=settings['block_optim_wd'])
+                            #    weight_decay=settings['block_optim_wd'])
     return torch.optim.RMSprop(net.parameters(), lr=settings['block_optim_lr'], 
                                weight_decay=settings['block_optim_wd'], centered=False, 
                                momentum=settings['block_optim_momentum'])
@@ -73,11 +73,11 @@ class PolicyStats:
         return float(self.exec)/self.total
 
     def __repr__(self) -> str:
-        return f'Policy stats: average exec percentage {self.get_exec_percentage()}'
+        return f'Policy stats: average exec percentage [0 - 1] : {self.get_exec_percentage():0.3f}'
         
 
 class Policy(torch.nn.Module, metaclass=abc.ABCMeta):
-    def __init__(self, block_size, verbose=False):
+    def __init__(self, block_size, verbose=False, quantize_number_exec=0):
         super().__init__()
         self.block_size = block_size
         self.net = None
@@ -85,10 +85,26 @@ class Policy(torch.nn.Module, metaclass=abc.ABCMeta):
         self.verbose = verbose
         self.stats = PolicyStats()
         self.fp16_enabled = False
+        self.quantize_number_exec = quantize_number_exec
 
     
     def is_trainable(self):
         return self.net is not None
+    
+    def quantize_number_exec_grid(self, grid):
+        if self.quantize_number_exec > 0: 
+            with timings.env('policy/quantize_number_exec',3):
+                # it is more efficient to quantize the number of executed blocks 
+                # since cudnn.benchmark caches per tensor dimension
+                grid2 = grid.cpu().bool()
+                total = grid2.numel()
+                idx_not_exec = torch.nonzero(~grid2.flatten()).squeeze(1).tolist()
+                num_exec = total - len(idx_not_exec)
+                multiple = int(total*self.quantize_number_exec)
+                num_exec_rounded = multiple * (1 + (num_exec - 1) // multiple)
+                idx = random.sample(idx_not_exec, num_exec_rounded - num_exec)
+                grid.flatten()[idx] = 1  
+        return grid
 
     @abstractmethod
     def forward(self, policy_meta):
@@ -145,7 +161,10 @@ class PolicyRandom(Policy):
         if policy_meta.get('outputs_prev', None) is None:
             grid = torch.ones( (N, 1, G[0], G[1]), device=policy_meta['inputs'].device).type(torch.bool)
         else:
-            grid = (torch.randn( (N, 1, G[0], G[1]), device=policy_meta['inputs'].device) > 0).type(torch.bool)            
+            grid = (torch.randn( (N, 1, G[0], G[1]), device=policy_meta['inputs'].device) > 0).type(torch.bool)   
+            
+        grid = self.quantize_number_exec_grid(grid)
+                    
         policy_meta['grid'] = grid
         policy_meta = self.stats.add_policy_meta(policy_meta)
         return policy_meta
@@ -170,8 +189,6 @@ class PolicyTrainRL(Policy, metaclass=abc.ABCMeta):
             quantize_number_exec (float, optional): Quantize the number of executed blocks to a percentage of the total amount of blocks. Float is 
             percentage (e.g. 1/16 will quantize the number of executedb blocks to 8 in a grid of 8x16 blocks). Improves efficiency as cudnn.benchmark relies on 
             non-changing tensor dimensions. Defaults to 0 (disabled).
-            num_init_images (int, optional): Number of images to warmup the policy. Block target starts at 1 and reaches the given block_target at num_init_images.
-            Defaults to 100.
             verbose (bool, optional): Print debugging information for policy. Defaults to False.
         """
         super().__init__(block_size, verbose)
@@ -184,13 +201,10 @@ class PolicyTrainRL(Policy, metaclass=abc.ABCMeta):
         self.running_cost = None
         self.net = policy_net
 
-        self.num_init_images = num_init_images
-
         self.complexity_weight_gamma = complexity_weight
         self.optimizer = optimizer
 
         self.at_least_one = at_least_one
-        self.quantize_number_exec = quantize_number_exec
     
     def forward(self, policy_meta):
         N,C,H,W = policy_meta['inputs'].shape
@@ -206,6 +220,7 @@ class PolicyTrainRL(Policy, metaclass=abc.ABCMeta):
             # execute policy net
             with torch.enable_grad():   
                 with timings.env('policy/net',3):
+                    assert self.net.training
                     grid_logits = self.net(policy_meta)
                     assert torch.all(~torch.isnan(grid_logits)), "Policy net returned NaN's, maybe optimization problem?"
                 
@@ -217,20 +232,8 @@ class PolicyTrainRL(Policy, metaclass=abc.ABCMeta):
                     # if no blocks executed, execute a single one
                     grid[0,0,0,0] = 1
                 
-                if self.quantize_number_exec > 0: 
-                    with timings.env('policy/quantize_number_exec',3):
-                        # it might be more efficient to round the quantize the number of executed blocks 
-                        # as cudnn.benchmark caches per tensor dimension
-                        grid2 = grid.cpu().bool()
-                        total = grid2.numel()
-                        idx_not_exec = torch.nonzero(~grid2.flatten()).squeeze(1).tolist()
-                        num_exec = total - len(idx_not_exec)
-                        multiple = int(total*self.quantize_number_exec)
-                        num_exec_rounded = multiple * (1 + (num_exec - 1) // multiple)
-                        idx = random.sample(idx_not_exec, num_exec_rounded - num_exec)
-                        grid.flatten()[idx] = 1                   
+                grid = self.quantize_number_exec_grid(grid)                 
 
-                
                 grid_probs = m.probs
                 grid_log_probs = m.log_prob(grid)
                 
@@ -251,9 +254,8 @@ class PolicyTrainRL(Policy, metaclass=abc.ABCMeta):
             return ig
     
     def _get_reward_complexity(self, policy_meta: Dict) -> float:
-        # anneal target cost over init images to initalize policy
-        target =  1-(1-self.block_target)*min(1, self.stats.count_images/self.num_init_images) 
-        reward_sparsity = -float(self.running_cost - target)
+        # anneal target cost from 1 to block_target over num_init_images images to initalize policy smoothly
+        reward_sparsity = -float(self.running_cost - self.block_target)
         reward_sparsity = reward_sparsity*abs(reward_sparsity)
         return reward_sparsity
 
@@ -294,18 +296,19 @@ class PolicyTrainRL(Policy, metaclass=abc.ABCMeta):
                 skip_mean = policy_meta["grid_probs"][~grid].mean()
                 if self.verbose:
                     s = ''
-                    s += f'BLOCKS/running_cost: {self.running_cost} \n'
-                    s += f'BLOCKS/block_use: {block_use} \n'
+                    s += f'BLOCKS/running_cost: {self.running_cost: 0.3f} \n'
+                    s += f'BLOCKS/block_use: {block_use:0.3f} \n'
                     s += f'BLOCKS/information_gain_max: {ig.max()} \n'
                     s += f'BLOCKS/information_gain_min: {ig.min()} \n'
                     s += f'BLOCKS/reward_complexity_weighted: {reward_complexity_weighted} \n'
-                    s += f'BLOCKS/avg_prob_exec: {exec_mean} \n'
-                    s += f'BLOCKS/avg_prob_skip: {skip_mean} \n'
+                    s += f'BLOCKS/avg_prob_exec: {exec_mean:0.3f} \n'
+                    s += f'BLOCKS/avg_prob_skip: {skip_mean:0.3f} \n'
                     print(s)
                     print(self.stats)
-                if self.stats.count_images > self.num_init_images and exec_mean - skip_mean < 0.3:
+                if self.stats.count_images > 300 and exec_mean - skip_mean < 0.3:
                     print('Warning: Block execution policy seems not well trained yet.'
-                            f'\n Mean predicted probability of executed blocks [0-1]: {exec_mean} '
-                            f'\n Mean predicted probability of skipped blocks [0-1]: {skip_mean} ')
+                            f'\n Percentage exectued: {self.running_cost: 0.3f} '
+                            f'\n Mean predicted probability of executed blocks [0-1]: {exec_mean:0.3f} '
+                            f'\n Mean predicted probability of skipped blocks [0-1]: {skip_mean:0.3f} ')
                     
         return policy_meta

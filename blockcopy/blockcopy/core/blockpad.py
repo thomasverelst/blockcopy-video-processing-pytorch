@@ -9,7 +9,7 @@ from .cuda import (GET_BLOCKS, Dtype, Stream, _kernel_header_blocks, cudaok,
                    load_kernel, roundup)
 
 CUDA_NUM_THREADS = 512
-CUDA_NUM_BLOCKS = 2048
+CUDA_NUM_BLOCKS = 1024
         
 def pad(features, transfer, grid_idx, exec_map, pad=1):
     if False: # debug mode with zero pad
@@ -37,7 +37,7 @@ class BlockPadFunction(Function):
 
         if blocksize <= 2:
             import warnings
-            warnings.warn('Block size of 2 or smaller is can be inefficient!')
+            warnings.warn(f'Block size of 2 or smaller can be inefficient! Got size: {blocksize}')
         
         blocksize_padded = blocksize+2*pad
         H, W = blocksize*grid_height, blocksize*grid_width
@@ -53,6 +53,8 @@ class BlockPadFunction(Function):
             grid_x = min(GET_BLOCKS(npixels_out, threads_x), CUDA_NUM_BLOCKS)
             grid_y = max(1, min(CUDA_NUM_BLOCKS//grid_x+1, GET_BLOCKS(C, threads_y))) 
             grid = (grid_x, grid_y)
+            
+            
 
             with timings.env('block/pad_kernel',20):
                 with torch.cuda.device_of(data_exec):
