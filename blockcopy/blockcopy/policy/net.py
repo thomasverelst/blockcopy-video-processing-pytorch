@@ -18,7 +18,6 @@ class PolicyNet(nn.Module):
         self.output_num_classes = settings['block_num_classes']
         self.use_prev_grid = True
         
-        
         in_channels = 3 # input image RGB
         if self.use_frame_state:
             in_channels += 3

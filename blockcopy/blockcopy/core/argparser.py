@@ -4,7 +4,6 @@ def add_argparser_arguments(parser):
     parser.add_argument("--block-optim-lr", type=float, default=0.0001, help='policy learning rate')
     parser.add_argument("--block-optim-wd", type=float, default=0.001, help='policy weight decay')
     parser.add_argument("--block-optim-momentum", type=float, default=0, help='policy optimizer momentum')
-    parser.add_argument("--block-net", type=str, default='resnet8', help='backbone for policy net')
     parser.add_argument("--block-target", type=float, default=0.50, help='target execution percentage')
     parser.add_argument("--block-complexity-weight", type=float, default=5, help='weight gamma, setting importance of complexity reward')
     parser.add_argument("--block-size", type=int, default=128, help='size of blocks in px')
