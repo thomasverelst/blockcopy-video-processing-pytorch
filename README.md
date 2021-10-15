@@ -3,7 +3,10 @@
 
 [[paper]](https://openaccess.thecvf.com/content/ICCV2021/papers/Verelst_BlockCopy_High-Resolution_Video_Processing_With_Block-Sparse_Feature_Propagation_and_Online_ICCV_2021_paper.pdf)
 
-<img src="https://thomasverelst.github.io/blockcopy_teaser.png" width="300" />
+<img src="https://thomasverelst.github.io/teaser.gif" />
+
+<img src="https://thomasverelst.github.io/blockcopy_teaser.png" width="300" />\
+
 
 ## Coming soon
 At the moment, we only provide a basic blockcopy implementation for semantic segmentation.
@@ -18,9 +21,9 @@ Coming soon:
 There is an installable package of the blockcopy framework in `blockcopy` folder, which is used in the codebases for the separate tasks.
 Each task has its own readme with additional instructions for that codebase.
 
+* [Pedestrian detection (Pedestron)](./Pedestron/): integration of BlockCopy in Pedestron for pedestrian detection. More difficult to install as it requires CUDA compilation.
 * [Semantic segmentation](./semantic_segmentation/): example implementation of BlockCopy with a semantic segmentation backbone, although 
-    semantic segmentation is not an optimal application since every region has changing outputs
-* [Pedestrian detection (Pedestron)](./Pedestron/): integration of BlockCopy in Pedestron
+    semantic segmentation is not an optimal application since every region has changing outputs. Easier to understand and install.
 
 ## Installation
 This code requires an NVIDIA CUDA-capable GPU (no CPU support), with a recent Pytorch version and CuPy:
@@ -48,7 +51,7 @@ Install our blockcopy module
     python setup.py develop
     cd ..
 
-If any other packages are missing, they should be easily installable using pip.
+If any other packages are missing, they should be easily installable using pip. Note that Pedestron requires extra installation steps.
 
 ## Dataset preparation
 ### Requirements

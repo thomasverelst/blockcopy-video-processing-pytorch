@@ -1,0 +1,1 @@
+Original Pedestron docs are in this dir, they should not be needed to execute the code with BlockCopy.
