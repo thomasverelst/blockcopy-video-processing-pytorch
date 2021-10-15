@@ -1,5 +1,4 @@
 from blockcopy.utils.profiler import timings
-from blockcopy.policy import backbones
 from typing import Dict
 import torch.nn as nn 
 import torch
@@ -27,10 +26,7 @@ class PolicyNet(nn.Module):
             in_channels += self.output_num_classes
         if self.use_prev_grid:
             in_channels += 1
-        
-        self.backbone = backbones.__dict__[settings['block_net']](pretrained=False, in_channels=in_channels, width_factor=1)
-        
-        # mid_channels = self.backbone.OUT_CHANNELS//2
+
         planes = 96
         kernel_sizes = [3,3,5,5,5,5,3]
         strides      = [2,2,2,1,2,2,1]
@@ -39,15 +35,13 @@ class PolicyNet(nn.Module):
         layers.append(self._make_layer(in_channels, 32, kernel_size=kernel_sizes[0], stride=strides[0]))
         layers.append(self._make_layer(32, planes, kernel_size=kernel_sizes[1], stride=strides[1]))
         for i in range(2, len(strides)-2):
-            print('i', i)
-            print('strides', strides[i])
             layers.append(self._make_layer(planes, planes, kernel_size=kernel_sizes[i], stride=strides[i]))
         layers.append(self._make_layer(planes, 1, kernel_size=kernel_sizes[-1], stride=strides[-1], bnrelu=False))
         self.layers = nn.Sequential(*layers)        
         
     def _make_layer(self, in_channels, out_channels, kernel_size=3, stride=1, bnrelu=True):
         layers = []
-        layers.append(nn.BatchNorm2d(in_channels))
+        layers.append(nn.BatchNorm2d(in_channels, momentum=0.02))
         layers.append(nn.ReLU(inplace=False))
         print(kernel_size, (kernel_size-1)//2, stride)
         layers.append(nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, padding=(kernel_size-1)//2, dilation=1, stride=stride, bias=not bnrelu))
@@ -74,8 +68,7 @@ class PolicyNet(nn.Module):
             assert frame.size(1) == 3
             
             input_features.append(F.interpolate(frame, scale_factor=self.scale_factor, mode='nearest').float())
-            # print('input features size[0]', input_features[0].shape)
-            
+
             if self.use_frame_state:
                 # frame state (last executed frame per block)
                 frame_state = policy_meta['frame_state']
@@ -97,10 +90,8 @@ class PolicyNet(nn.Module):
             
             x = torch.cat(input_features, dim=1).detach()
             
-        # with timings.env('policy/net/backbone', 5):
         with timings.env('policy/net/layers', 5):
             logits = self.layers(x)
-            # logits = self.head(x)
 
         assert logits.shape == (N, 1, H//self.block_size, W//self.block_size), \
             f'logits shape: {logits.shape}, frame shape: {(N, C, H, W)}, block size: {self.block_size}'

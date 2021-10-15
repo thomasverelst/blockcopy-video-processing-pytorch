@@ -54,17 +54,6 @@ class InformationGainObjectDetection(InformationGain):
         return build_instance_mask_iou_gain(policy_meta['outputs'], policy_meta['outputs_prev'], (N, self.num_classes, H, W), device=policy_meta['inputs'].device)
 
 def build_instance_mask(bbox_results: List[List[np.ndarray]], size: tuple, device='cpu') -> torch.Tensor:
-    """
-    Returns a tensor with s
-
-    Args:
-        bbox_results (List[List[np.ndarray]]): [description]
-        size (tuple): [description]
-        device (str, optional): [description]. Defaults to 'cpu'.
-
-    Returns:
-        [type]: [description]
-    """
     mask = torch.zeros(size, device=device)
     num_classes = size[1]
     for c in range(num_classes):
