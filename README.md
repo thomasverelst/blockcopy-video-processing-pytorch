@@ -62,7 +62,7 @@ Required Cityscapes packages:
 
 ### Dataset folder structure
 
-Unpack thsoe in a folder, which should result in the following structure:
+Unpack these in a folder, which should result in the following structure:
 
     cityscapes/
     cityscapes/leftImg8bit/
