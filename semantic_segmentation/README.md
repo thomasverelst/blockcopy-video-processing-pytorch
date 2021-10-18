@@ -1,4 +1,7 @@
 # BlockCopy - semantic segmentation
+
+Semantic segmentation with the [SwiftNet](https://openaccess.thecvf.com/content_CVPR_2019/html/Orsic_In_Defense_of_Pre-Trained_ImageNet_Architectures_for_Real-Time_Semantic_Segmentation_CVPR_2019_paper.html) architecture on Cityscapes with BlockCopy to accelerate video processing.
+
 ## Installation
 Follow the installation instructions in the [root folder](https://github.com/thomasverelst/blockcopy-video-processing-pytorch/README.md)
 Follow the dataset instructions in the same doc. Alternatively, the code can run on dummy data.
@@ -10,7 +13,7 @@ Semantic segmentation checkpoints can be found here.
 | network       | static accuracy  | dynamic accuracy  | link                             |
 |---------------|------------------|-------------------|----------------------------------|
 | SwiftNet-RN18 | 75.6 @ 104 GMACs | 73.5 @ 63.2 GMACs | [https://drive.google.com/file/d/1-06FdQTegy76A0dv4JDvwPNOsJu6QCZw/view?usp=sharing](https://drive.google.com/file/d/1-06FdQTegy76A0dv4JDvwPNOsJu6QCZw/view?usp=sharing) |
-| SwiftNet-RN50 | 77.6 @ 210 GMACs | 76.2 @ 121 GMACs | [https://drive.google.com/file/d/1FtiIEhD9tVMPcJwx41itGCEKU3cyyd0e/view?usp=sharing](https://drive.google.com/file/d/1FtiIEhD9tVMPcJwx41itGCEKU3cyyd0e/view?usp=sharing) |
+| SwiftNet-RN50 | 77.6 @ 210 GMACs | 76.5 @ 121 GMACs | [https://drive.google.com/file/d/1FtiIEhD9tVMPcJwx41itGCEKU3cyyd0e/view?usp=sharing](https://drive.google.com/file/d/1FtiIEhD9tVMPcJwx41itGCEKU3cyyd0e/view?usp=sharing) |
 
 Download the RN50 checkpoint and place it in the `pretrained/` folder
 Note that these checkpoints only have a pretrained static segmentation model, the policy is always trained at test time as specified below.
