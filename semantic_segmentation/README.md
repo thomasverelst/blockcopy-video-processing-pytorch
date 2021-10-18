@@ -3,7 +3,7 @@
 Semantic segmentation with the [SwiftNet](https://openaccess.thecvf.com/content_CVPR_2019/html/Orsic_In_Defense_of_Pre-Trained_ImageNet_Architectures_for_Real-Time_Semantic_Segmentation_CVPR_2019_paper.html) architecture on Cityscapes with BlockCopy to accelerate video processing.
 
 ## Installation
-Follow the installation instructions in the [root folder](https://github.com/thomasverelst/blockcopy-video-processing-pytorch/README.md)
+Follow the installation instructions in the [root folder](https://github.com/thomasverelst/blockcopy-video-processing-pytorch/)
 Follow the dataset instructions in the same doc. Alternatively, the code can run on dummy data.
 
 ## Model checkpoints
