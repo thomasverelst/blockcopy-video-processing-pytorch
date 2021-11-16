@@ -2,6 +2,7 @@
 *High-Resolution Video Processing with Block-Sparse Feature Propagation and Online Policies*
 
 [[paper]](https://openaccess.thecvf.com/content/ICCV2021/papers/Verelst_BlockCopy_High-Resolution_Video_Processing_With_Block-Sparse_Feature_Propagation_and_Online_ICCV_2021_paper.pdf)
+[[youtube (5 minutes)]](https://youtu.be/juhGc1ZB2rY)
 
 <img src="https://thomasverelst.github.io/teaser.gif" />
 
