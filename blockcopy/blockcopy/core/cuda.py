@@ -25,8 +25,9 @@ def Dtype(t):
 @cupy.memoize(for_each_device=True)
 def load_kernel(kernel_name, code, **kwargs):
     code = Template(code).substitute(**kwargs)
-    options = list(CUDA_PATH[:]).extend(('--restrict','--use_fast_math'))
-    kernel_code = cupy.cuda.compile_with_cache(code, options=options)
+    options = list(CUDA_PATH[:])
+    options.extend(('--restrict','--use_fast_math'))
+    kernel_code = cupy.cuda.compile_with_cache(code, options=tuple(options))
     return kernel_code.get_function(kernel_name)
 
 def GET_BLOCKS(N, NTHREADS):
