@@ -11,6 +11,8 @@ import torch
 import ctypes
 Stream = namedtuple('Stream', ['ptr'])
 
+# Specify CUDA include path
+CUDA_PATH = ('-I/usr/local/cuda/include','-I/usr/local/cuda-11.1/include','-I/usr/local/cuda-11.3/include')
 
 def Dtype(t):
     if t.dtype == torch.float32:
@@ -21,21 +23,11 @@ def Dtype(t):
         raise NotImplementedError(t.dtype)
 
 @cupy.memoize(for_each_device=True)
-def load_kernel(kernel_name, code, cst_array=False, **kwargs):
+def load_kernel(kernel_name, code, **kwargs):
     code = Template(code).substitute(**kwargs)
-    # kernel_code = cupy.cuda.compile_with_cache(code, options=('--restrict','--use_fast_math', '--maxrregcount=16'))
-    kernel_code = cupy.cuda.compile_with_cache(code, options=('-I/usr/local/cuda/include','-I/usr/local/cuda-11.1/include','-I/usr/local/cuda-11.3/include','--restrict','--use_fast_math'))
-    
-    if cst_array:
-        b = cupy.core.core.memory_module.BaseMemory()
-        b.ptr = kernel_code.get_global_var(cst_array)
-        p = cupy.core.core.memory_module.MemoryPointer(b, 0)
-        # NOTE: seems that we could also use cst_array.ctypes._data,
-        # but avoid internal attributes if possible...
-        return kernel_code.get_function(kernel_name), p
-    else:
-        return kernel_code.get_function(kernel_name)
-    # kernel_code = cupy.cuda.compile_with_cache(code,options=('--restrict',))
+    options = list(CUDA_PATH[:]).extend(('--restrict','--use_fast_math'))
+    kernel_code = cupy.cuda.compile_with_cache(code, options=options)
+    return kernel_code.get_function(kernel_name)
 
 def GET_BLOCKS(N, NTHREADS):
     return min((N + NTHREADS - 1) // (NTHREADS), 256*256-1)
@@ -46,7 +38,6 @@ def roundup(number, multiple, max_ = None):
         return min(max_, out)
     return out
 
-
 def cudaok(x, dtype=None, dtype2=None, device=None):
     assert x.is_cuda
     if device is not None:
@@ -54,8 +45,6 @@ def cudaok(x, dtype=None, dtype2=None, device=None):
     assert x.is_contiguous()
     assert (dtype is None or x.dtype == dtype or x.dtype == dtype2), (x.dtype, dtype, dtype2)
     return True
-
-
 
 _kernel_header_blocks = '''
 #include "cuda_fp16.h"
