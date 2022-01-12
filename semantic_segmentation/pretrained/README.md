@@ -1,1 +1,1 @@
-Folder for checkpoints
+Directory for checkpoints
