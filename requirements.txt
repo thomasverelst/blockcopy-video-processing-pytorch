@@ -3,4 +3,4 @@ tqdm
 matplotlib
 cmapy
 opencv-python
-ptflops=0.6.6
+ptflops==0.6.6
