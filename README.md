@@ -17,13 +17,6 @@ Each task has its own readme with additional instructions for that codebase.
 * [Semantic segmentation](./semantic_segmentation/): example implementation of BlockCopy with a semantic segmentation backbone, although 
     semantic segmentation is not an optimal application since every region has changing outputs. Easier to understand and install.
 
-Coming later:
-
-* more documentation in the codebase and implementation
-* code improvements for better analysis and debugging
-* more efficient code with less overhead
-* improved semantic segmentation model
-
 ## Installation
 This code requires an NVIDIA CUDA-capable GPU (no CPU support), with a recent Pytorch version and CuPy:
 

@@ -226,6 +226,12 @@ def parse_args():
 
 
 def main():
+    torch.manual_seed(0)
+    import random
+    random.seed(0)
+    np.random.seed(0)
+
+
     args = parse_args()
 
     if args.out is not None and not args.out.endswith(('.json', '.pickle')):
@@ -288,11 +294,9 @@ def main():
             if 'CLASSES' in checkpoint['meta']:
                 model.CLASSES = checkpoint['meta']['CLASSES']
             else:
-                model.CLASSES = dataset.CLASSES        # old versions did not save class info in checkpoints, this walkaround is
-        # for backward compatibility
-
-        # add flops counting
-
+                # old versions did not save class info in checkpoints, this walkaround is
+                # for backward compatibility
+                model.CLASSES = dataset.CLASSES        
         
         if not distributed:
             model = MMDataParallel(model, device_ids=[0])
@@ -346,6 +350,8 @@ def main():
                     temp['bbox'] = box[:4].tolist()
                     temp['score'] = float(box[4])
                     res.append(temp)
+        import os
+        os.makedirs(os.path.dirname(args.out), exist_ok=True)
         with open(args.out, 'w') as f:
             json.dump(res, f)
         MRs = validate('datasets/CityPersons/val_gt.json', args.out)

@@ -2,7 +2,7 @@ import torch
 
 from .cuda import (cudaok, GET_BLOCKS, roundup, Dtype, load_kernel, Stream, _kernel_header_blocks)
 from torch.autograd import Function
-from ..utils.profiler import timings
+from .profiler import timings
 
 CUDA_NUM_THREADS = 512
 CUDA_NUM_BLOCKS = 1024

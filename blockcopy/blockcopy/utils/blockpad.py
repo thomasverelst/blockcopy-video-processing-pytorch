@@ -2,7 +2,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from ..utils.profiler import timings
+from .profiler import timings
 from torch.autograd import Function
 
 from .cuda import (GET_BLOCKS, Dtype, Stream, _kernel_header_blocks, cudaok,

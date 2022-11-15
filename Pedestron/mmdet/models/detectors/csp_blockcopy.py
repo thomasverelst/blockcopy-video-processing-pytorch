@@ -69,7 +69,7 @@ class CSPBlockCopy(CSP):
                 x = x.to_blocks(self.policy_meta['grid'])
 
                 # get frame state (latest executed frame per block)
-                self.policy_meta['frame_state'] = x.block_combine_().to_tensor()
+                self.policy_meta['frame_state'] = x.combine_().to_tensor()
                 
                 # run model
                 x = self.extract_feat(x)
