@@ -1,5 +1,5 @@
 def add_argparser_arguments(parser):
-    parser.add_argument("--block-policy", type=str, default='rl_semseg', choices=['all', 'none', 'random', 'rl_semseg', 'rl_objectdetection'],  help='policy name')
+    parser.add_argument("--block-policy", type=str, default='rl_semseg', choices=['static', 'all', 'none', 'random', 'rl_semseg', 'rl_objectdetection'],  help='policy name')
     parser.add_argument("--block-num-classes", type=int, default=19, help='number of output classes of the main task')
     parser.add_argument("--block-optim-lr", type=float, default=0.0001, help='policy learning rate')
     parser.add_argument("--block-optim-wd", type=float, default=0.001, help='policy weight decay')
