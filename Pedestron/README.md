@@ -5,7 +5,10 @@ We removed architectures and datasets that are not useful for our experiments fo
 
 ## Installation
 
+Note: a Dockerfile (contributed by a user, thanks!) is available in `./docker/Dockerfile`
+
 **Requirements**
+
 We tested with 
 * Pytorch 1.9.1
 * CUDA 11.4
@@ -13,20 +16,21 @@ We tested with
 * GCC 9.3
 * mmdet 0.6.0
 
-**Installation **
+**Installation**
 
 * Install BlockCopy, its requirements and the cityscapes dataset as specified in the [BlockCopy readme](../README.md)
 * Install cython: `pip install cython`
 * Install pedestron: `python setup.py develop` (if CUDA extensions do not build, check your CUDA setup and if the correct paths are set)
 
-**Dataset
+
+**Dataset**
 
 Prepare Cityscapes video data as in the main [BlockCopy readme](../README.md) and update the `img_root` in the config files located in
 
     configs/elephant/cityperson
 
 
-**Model checkpoints **
+**Model checkpoints**
 
 Get the CSP model from Pedestron from [Google drive](https://drive.google.com/file/d/14qpoyQWIirzUyLZHTxjZe-09AxiUtIxK/view?usp=sharing).
 Place in `./checkpoints/` dir resulting in the following structure:
